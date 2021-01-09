@@ -270,7 +270,7 @@ The correspondence and principal components analysis groups Calderon's works in 
 I decided that the method would choose the number of clusters to see how it grouped them.
 Yerma and Bodas de sangre, 2 of Lorca's works are grouped in 1 cluster. This is because they are plays and the other two are poetry.
 The reason why the Romancero gitano and Un poeta en Nueva york are standing may be that 
-The themes of each are very different and therefore have few words in common with any other work.
+the themes of each are very different and therefore have few words in common with any other work.
 
 One theory I have about these results is that Calderón, who lived in the 17th century wrote for the Court, so the themes, words and conversations in his works had to be very careful, without experimenting too much, and following the same style so as not to discontent his audience. 
 
