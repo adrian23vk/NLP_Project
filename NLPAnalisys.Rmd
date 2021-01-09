@@ -323,3 +323,8 @@ In contrast, Lorca, being a person who lived in the 20th century and an exponent
 
 You can see  how different the clusters are.
 The last cluster it creates is the York cluster, which is the most different of all, even with those of the same author.
+
+
+
+Github project: https://github.com/adrian23vk/NLP_Project
+
