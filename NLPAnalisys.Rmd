@@ -1,0 +1,325 @@
+---
+title: 'NLP project: Analisys of spanish authors'
+output:
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+---
+The objective of this project is the analysis of the authors Calderón and Lorca through some of their works. To do this, clusters will be created to see how, according to the words they use, each of the authors writes.It is expected that each of the authors have in the same cluster their works.  The selected works of Calderón are La vida es sueño, La dama duende and El principe constante. The works of Lorca are Yerma, El romancero gitano, Bodas de sangre and Un poeta en Nueva York.
+
+
+```{r include = FALSE}
+knitr::opts_chunk$set(message=FALSE)
+knitr::opts_chunk$set(warning=FALSE)
+knitr::opts_chunk$set(fig.align = "center")
+```
+```{r ,warning=FALSE}
+library(tm)
+library(wordcloud)
+library(tidyverse) #data manipilation
+library(FactoMineR) # PCA computation
+library(factoextra) # nice plotting for PCA objects
+library(readr)
+
+
+```
+
+# Read data
+```{r}
+source.Calderon=DirSource("Calderon/", encoding = "UTF-8")
+corpus.Calderon = Corpus(source.Calderon, readerControl=list(readPlain, language="es",                                                             load=TRUE))
+source.Lorca = DirSource("Lorca/", encoding ="UTF-8")
+corpus.Lorca = Corpus(source.Lorca, readerControl=list(readPlain, language="es",
+                                                       load=TRUE))
+source.principe = DirSource("Calderon/Principe/")
+corpus.Principe= Corpus(source.principe, readerControl=list(readPlain, language="es",
+                                                            load=TRUE))
+source.dama = DirSource("Calderon/Dama/", encoding ="UTF-8")
+corpus.dama= Corpus(source.dama, readerControl=list(readPlain, language="es", 
+                                                    load=TRUE))
+source.sueño = DirSource("Calderon/Sueño/", encoding ="UTF-8")
+corpus.sueño= Corpus(source.sueño, readerControl=list(readPlain, language="es",
+                                                      load=TRUE))
+source.bodas = DirSource("Lorca/Bodas/", encoding ="UTF-8")
+corpus.bodas= Corpus(source.bodas, readerControl=list(readPlain, language="es", 
+                                                      load=TRUE))
+source.romancero = DirSource("Lorca/Romancero/", encoding ="UTF-8")
+corpus.romancero= Corpus(source.romancero, readerControl=list(readPlain, language="es",
+                                                              load=TRUE))
+source.yerma = DirSource("Lorca/Yerma/", encoding ="UTF-8")
+corpus.yerma= Corpus(source.yerma, readerControl=list(readPlain, language="es", 
+                                                      load=TRUE))
+source.york = DirSource("Lorca/York/", encoding ="UTF-8")
+corpus.york= Corpus(source.york, readerControl=list(readPlain, language="es", 
+                                                    load=TRUE))
+```
+Creamos los corpus por autor y por obra.
+# Fast Inspection
+```{r}
+#inspect(corpus.Calderon[1])
+meta(corpus.Calderon[[1]])
+```
+
+
+```{r}
+tdm.Calderon = TermDocumentMatrix(corpus.Calderon)
+tdm.Lorca = TermDocumentMatrix(corpus.Lorca)
+tdm.Calderon
+tdm.Lorca
+tdm.principe = TermDocumentMatrix(corpus.Principe)
+tdm.dama = TermDocumentMatrix(corpus.dama)
+tdm.sueño = TermDocumentMatrix(corpus.sueño)
+tdm.bodas = TermDocumentMatrix(corpus.bodas)
+tdm.romancero = TermDocumentMatrix(corpus.romancero)
+tdm.yerma = TermDocumentMatrix(corpus.yerma)
+tdm.york = TermDocumentMatrix(corpus.york)
+```
+You can see that the sparsity is quite low.
+```{r}
+inspect(tdm.Calderon)
+```
+
+```{r}
+inspect(tdm.Lorca)
+
+```
+
+The most used words are stopwords. We need to get rid of them.
+
+```{r}
+freq.Lorca=rowSums(as.matrix(tdm.Lorca))
+freq.Calderon=rowSums(as.matrix(tdm.Calderon))
+freq.sueño=rowSums(as.matrix(tdm.sueño))
+freq.principe=rowSums(as.matrix(tdm.principe))
+freq.dama=rowSums(as.matrix(tdm.dama))
+freq.bodas=rowSums(as.matrix(tdm.bodas))
+freq.romancero =rowSums(as.matrix(tdm.romancero))
+freq.yerma=rowSums(as.matrix(tdm.yerma))
+freq.york =rowSums(as.matrix(tdm.york))
+par(mfrow=c(1,2))
+plot(sort(freq.Lorca, decreasing = T),col="blue",main="Word frequencies of Lorca"
+, xlab="Frequency-based rank", ylab = "Frequency")
+plot(sort(freq.Calderon, decreasing = T),col="green",main="Word frequencies of Calderón", 
+xlab="Frequency-based rank", ylab = "Frequency")
+
+```
+The two graphs are very similar, but you can see that Lorca uses words that appear much more often than Calderón.
+
+```{r}
+head(sort(freq.Calderon,decreasing = T))
+```
+```{r}
+head(sort(freq.Lorca,decreasing = T))
+
+```
+# Transformation
+```{r}
+txt.Calderon <- tm_map(corpus.Calderon, tolower)
+txt.Calderon = tm_map(txt.Calderon,removeWords,c(stopwords("es")))
+txt.Calderon = tm_map(txt.Calderon,removePunctuation)
+txt.Calderon = tm_map(txt.Calderon,removeNumbers)
+txt.Calderon = tm_map(txt.Calderon,stripWhitespace)
+
+tdm.Calderon = TermDocumentMatrix(txt.Calderon)
+```
+```{r}
+txt.Lorca <- tm_map(corpus.Lorca, tolower)
+txt.Lorca = tm_map(txt.Lorca,removeWords,c(stopwords("es")))
+txt.Lorca = tm_map(txt.Lorca,removePunctuation)
+txt.Lorca = tm_map(txt.Lorca,removeNumbers)
+txt.Lorca = tm_map(txt.Lorca,stripWhitespace)
+
+tdm.Lorca = TermDocumentMatrix(txt.Lorca)
+```
+```{r}
+txt.sueño <- tm_map(corpus.sueño, tolower)
+txt.sueño = tm_map(txt.sueño,removeWords,c(stopwords("es")))
+txt.sueño = tm_map(txt.sueño,removePunctuation)
+txt.sueño = tm_map(txt.sueño,removeNumbers)
+txt.sueño = tm_map(txt.sueño,stripWhitespace)
+
+tdm.sueño = TermDocumentMatrix(txt.sueño)
+
+txt.principe <- tm_map(corpus.Principe, tolower)
+txt.principe = tm_map(txt.principe,removeWords,c(stopwords("es")))
+txt.principe = tm_map(txt.principe,removePunctuation)
+txt.principe = tm_map(txt.principe,removeNumbers)
+txt.principe = tm_map(txt.principe,stripWhitespace)
+
+tdm.principe = TermDocumentMatrix(txt.principe)
+
+txt.dama <- tm_map(corpus.dama, tolower)
+txt.dama = tm_map(txt.dama,removeWords,c(stopwords("es")))
+txt.dama = tm_map(txt.dama,removePunctuation)
+txt.dama = tm_map(txt.dama,removeNumbers)
+txt.dama = tm_map(txt.dama,stripWhitespace)
+
+tdm.dama = TermDocumentMatrix(txt.dama)
+
+txt.bodas <- tm_map(corpus.bodas, tolower)
+txt.bodas = tm_map(txt.bodas,removeWords,c(stopwords("es")))
+txt.bodas = tm_map(txt.bodas,removePunctuation)
+txt.bodas = tm_map(txt.bodas,removeNumbers)
+txt.bodas = tm_map(txt.bodas,stripWhitespace)
+
+tdm.bodas = TermDocumentMatrix(txt.bodas)
+
+txt.romancero <- tm_map(corpus.romancero, tolower)
+txt.romancero = tm_map(txt.romancero,removeWords,c(stopwords("es")))
+txt.romancero = tm_map(txt.romancero,removePunctuation)
+txt.romancero = tm_map(txt.romancero,removeNumbers)
+txt.romancero = tm_map(txt.romancero,stripWhitespace)
+
+tdm.romancero = TermDocumentMatrix(txt.romancero)
+
+txt.yerma <- tm_map(corpus.yerma, tolower)
+txt.yerma = tm_map(txt.yerma,removeWords,c(stopwords("es")))
+txt.yerma = tm_map(txt.yerma,removePunctuation)
+txt.yerma = tm_map(txt.yerma,removeNumbers)
+txt.yerma = tm_map(txt.yerma,stripWhitespace)
+
+tdm.yerma = TermDocumentMatrix(txt.yerma)
+```
+We remove unnecessary words from all corpora.
+
+
+# wordcloud
+```{r}
+set.seed(1234)
+words.Calderon = sort(rowSums((as.matrix(tdm.Calderon))),decreasing=TRUE)
+
+df.Calderon <- data.frame(word = names(words.Calderon),freq=words.Calderon)
+      wordcloud(words = df.Calderon$word, freq = df.Calderon$freq, min.freq = 20,
+          max.words=100, random.order=FALSE, rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"),scale =c(2,1) )
+```
+Most of the words are related to the names of the protagonists of the plays
+This is because some of the plays are plays. In these plays, each time a person speaks, they put their name, so the person who speaks the most appears. The word 'pues' has not been eliminated because it is not a word that is very common to use, so even though it is a connector it has not been eliminated.
+```{r}
+set.seed(1234)
+words.Lorca <- sort(rowSums((as.matrix(tdm.Lorca))),decreasing=TRUE)
+
+df.Lorca <- data.frame(word = names(words.Lorca),freq=words.Lorca)
+wordcloud(words = df.Lorca$word, freq = df.Lorca$freq, min.freq = 20,
+          max.words=200, random.order=FALSE, rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"),scale =c(2,1) )
+```
+It's the same as Calderon.
+```{r}
+words.sueño <- sort(rowSums((as.matrix(tdm.sueño))),decreasing=TRUE)
+df.sueño <- data.frame(word = names(words.sueño),freq=words.sueño)
+
+words.principe <- sort(rowSums((as.matrix(tdm.principe))),decreasing=TRUE)
+df.principe <- data.frame(word = names(words.principe),freq=words.principe)
+
+words.dama <- sort(rowSums((as.matrix(tdm.dama))),decreasing=TRUE)
+df.dama <- data.frame(word = names(words.dama),freq=words.dama)
+
+words.romancero <- sort(rowSums((as.matrix(tdm.romancero))),decreasing=TRUE)
+df.romancero <- data.frame(word = names(words.romancero),freq=words.romancero)
+
+words.bodas <- sort(rowSums((as.matrix(tdm.bodas))),decreasing=TRUE)
+df.bodas <- data.frame(word = names(words.bodas),freq=words.bodas)
+
+words.york <- sort(rowSums((as.matrix(tdm.york))),decreasing=TRUE)
+df.york <- data.frame(word = names(words.york),freq=words.york)
+
+words.yerma <- sort(rowSums((as.matrix(tdm.yerma))),decreasing=TRUE)
+df.yerma <- data.frame(word = names(words.yerma),freq=words.yerma)
+
+```
+
+We created the datasets of words ordered by frequency.
+
+```{r}
+#writers = data.frame(expand.grid(Author=c()))
+df.principe = df.principe[1:1000,]
+df.sueño   = df.sueño[1:1000,]
+df.dama   = df.dama[1:1000,]
+
+df.romancero   = df.romancero[1:750,]
+df.yerma = df.yerma[1:750,]
+df.york   = df.york[1:750,]
+df.bodas = df.bodas[1:750,]
+
+
+df.all3=list(df.principe, df.sueño, df.dama,df.romancero,df.yerma,df.york,df.bodas)%>% 
+reduce(full_join, by = "word")
+
+
+```
+The same number of words has been chosen from each author.
+
+```{r}
+df.all3$freq.x[is.na(df.all3$freq.x)]<-0
+df.all3$freq.y[is.na(df.all3$freq.y)]<-0
+df.all3$freq.x.x[is.na(df.all3$freq.x.x)]<-0
+df.all3$freq.y.y[is.na(df.all3$freq.y.y)]<-0
+df.all3$freq.x.x.x[is.na(df.all3$freq.x.x.x)]<-0
+df.all3$freq.y.y.y[is.na(df.all3$freq.y.y.y)]<-0
+df.all3$freq[is.na(df.all3$freq)]<-0
+
+words.all2 =df.all3$word
+Encoding(words.all2)<-"UTF-8"
+```
+We make a cleaning of missing values.
+
+```{r}
+df.all3_t = data.frame(t(df.all3))
+df.all3_t = df.all3_t[2:8,]
+freq.def=c()
+ncol(df.all3_t)
+
+for (i in 1:ncol(df.all3_t)) {
+  colu =paste(c("X",i),collapse = "")
+  columnDf = df.all3_t[i]
+  freq.def = append(freq.def,columnDf)
+}
+freq.def= as.numeric(unlist(freq.def,use.names = FALSE))
+
+
+writers2= data.frame(expand.grid(Books=c("Principe","Sueño","Dama","Romancero",
+"Yerma","York","Bodas"),Words=c(words.all2)),freq = c(freq.def))
+
+```
+We created the frequency dataframe.
+
+
+```{r}
+writers_table2=xtabs(freq~Books+Words,data= writers2)
+CA_writers = CA(writers_table2,graph = FALSE)
+par(mfrow=c(1,2))
+plot.CA(CA_writers,invisible = "col")
+
+```
+In this graphic you can see how the works of each of the authors are located. You can sense a little bit how the clusters are. While the works of Calderon, El principe Constante, La dama duende and La vida es sueño are in one, the works of Lorca are quite separate.
+```{r}
+res.hcpc= HCPC(CA_writers,nb.clust =-1,graph = FALSE )
+
+fviz_cluster(res.hcpc,
+             repel = TRUE,           
+             show.clust.cent = TRUE,
+             palette = "jco",         
+             ggtheme = theme_minimal(),
+             main = "Factor map",
+             )
+
+```
+
+
+We create the contingency table and do the correspondence analysis and 
+hierarchical clustering based on principal component analysis. 
+
+In this analysis you can see that the works of calderon do have similar words.
+The correspondence and principal components analysis groups Calderon's works in a cluster and Lorca's works in 3 clusters.
+I decided that the method would choose the number of clusters to see how it grouped them.
+Yerma and Bodas de sangre, 2 of Lorca's works are grouped in 1 cluster. This is because they are plays and the other two are poetry.
+The reason why the Romancero gitano and Un poeta en Nueva york are standing may be that 
+The themes of each are very different and therefore have few words in common with any other work.
+
+One theory I have about these results is that Calderón, who lived in the 17th century wrote for the Court, so the themes, words and conversations in his works had to be very careful, without experimenting too much, and following the same style so as not to discontent his audience. 
+
+In contrast, Lorca, being a person who lived in the 20th century and an exponent of the Generation of 27, his style of writing is much freer and varies greatly depending on his works. He did not have to write for a specific audience as Calderón did, and that is reflected in each of his works. 
+
+You can see  how different the clusters are.
+The last cluster it creates is the York cluster, which is the most different of all, even with those of the same author.
